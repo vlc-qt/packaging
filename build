@@ -1,0 +1,151 @@
+#!/usr/bin/make -f
+
+DOCKER_REPO:=tanosi/
+SCRIPTDIR:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+BUILDROOT:=$(abspath $(SCRIPTDIR)/root)
+
+# Sanity checks
+ifeq ("$(SCRIPTDIR)","$(CURDIR)")
+$(error Please run ./packaging/build inside of the project source directory)
+endif
+
+#
+# List of supported OS
+#
+
+DEBIAN:=
+UBUNTU:=ubuntu-xenial-amd64
+
+DEBS:=$(DEBIAN) $(UBUNTU)
+
+## Defaults
+
+PROJECT=$(notdir $(basename ${CURDIR}))
+VERSION=$(shell cat VERSION)
+RELEASE=1
+
+# Debian overrides
+DEB_VERSION=$(VERSION)
+DEB_RELEASE=$(RELEASE)
+
+NAME=$(PROJECT)-$(VERSION)
+TARBALL=$(NAME).tar.gz
+TARBALL_EXTRA_ARGS:=
+
+# get os-dist from target name
+define osdist
+$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\2/p')
+endef
+
+define ostarget
+$(shell echo $1| sed -n 's/\([a-z0-9\-]*\)-\([a-z0-9\-]*\)-\([a-z0-9\-]*\)/\2/p')
+endef
+
+define builderu
+$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\1/p' | tr a-z A-Z)
+endef
+
+define builder
+$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\1/p')
+endef
+
+-include $(SCRIPTDIR)/projects/$(PROJECT).mk
+
+$(info -------------------------------------------------------------------)
+$(info Building $(PROJECT) $(VERSION) (rev. $(RELEASE)))
+$(info -------------------------------------------------------------------)
+
+##
+## Common rules
+##
+
+# Build all
+all: $(DEBS)
+
+TAR:=tar
+ifneq ($(strip $(shell which gtar)), )
+	TAR=gtar
+endif
+
+$(BUILDROOT)/files:
+	@mkdir -p $(dir $@)
+	git ls-files >> $@
+
+# Create tarball in buildroot
+$(BUILDROOT)/$(TARBALL): $(BUILDROOT)/files
+	@echo "-------------------------------------------------------------------"
+	@echo "Creating source tarball"
+	@echo "-------------------------------------------------------------------"
+	$(TAR) \
+		--exclude=.git --exclude='.gitignore' --exclude='.gitmodules' \
+		--exclude=debian --exclude=rpm \
+		$(TARBALL_EXTRA_ARGS) \
+		--transform="s,,$(NAME)/,S" \
+		--owner=root --group=root \
+		-T $< --show-transformed \
+		-czvf $@
+
+# Copy tarball to buildroot/$OS-$DIST chroot
+$(BUILDROOT)/%/$(TARBALL): $(BUILDROOT)/$(TARBALL)
+	cp -pf $< $@
+
+# Copy builder.mk to buildroot/$OS-$DIST
+$(BUILDROOT)/%/Makefile:
+	@mkdir -p $(dir $@)
+	cp -pf $(SCRIPTDIR)/types/$(call builder,$@).mk $@
+
+# Build packages using Docker in buildroot/$OS-$DIST/
+$(BUILDROOT)/%/.build: $(BUILDROOT)/%/$(TARBALL) \
+                       $(BUILDROOT)/%/Makefile
+	@echo "-------------------------------------------------------------------"
+	@echo "Building packages"
+	@echo "-------------------------------------------------------------------"
+	rm -rf $@
+	cd $(dir $@) && \
+	ls -l && \
+	docker run \
+		-ti \
+		--volume $$(pwd):$$(pwd) \
+		--volume $(HOME)/.ccache:/ccache \
+		-e CCACHE_DIR=/ccache \
+		--workdir $$(pwd) \
+		--rm=true $(DOCKER_REPO)$(call osdist,$@) \
+		make PROJECT=$(PROJECT) NAME=$(NAME) \
+	         TARBALL=$(TARBALL) TARGET=$(call ostarget,$(call osdist,$@)) \
+	         VERSION=$($(call builderu,$@)_VERSION) \
+	         RELEASE=$($(call builderu,$@)_RELEASE)
+	@echo "Successfully build $(PROJECT) for $@"
+	ls -1sh $(dir $@)/results/
+	test -f $(dir $@)/results/.done
+
+##
+## DEB
+##
+
+# Copy debian/ to buildroot/$OS-$DIST
+$(BUILDROOT)/deb-%/debian/changelog: debian/changelog
+	@mkdir -p $(abspath $(dir $@)/../)
+	cp -fpR debian $(abspath $(dir $@)/../)
+
+# A rule to build DEB packages
+$(BUILDROOT)/deb-%/results/.done: $(BUILDROOT)/deb-%/debian/changelog \
+                                  $(BUILDROOT)/deb-%/.build
+	@true
+
+##
+## Targets
+##
+
+tarball: $(BUILDROOT)/$(TARBALL)
+
+# Don't remove all rules, otherwise pattern matching will stop work
+debian-%: $(BUILDROOT)/deb-debian-%/results/.done
+	@true
+ubuntu-%: $(BUILDROOT)/deb-ubuntu-%/results/.done
+	@true
+
+clean:
+	#rm -rf $(BUILDROOT)
+
+.SECONDARY: # no target is removed because it is considered intermediate
+.PHONY: clean
