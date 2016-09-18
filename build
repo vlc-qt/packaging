@@ -78,6 +78,7 @@ $(BUILDROOT)/$(TARBALL): $(BUILDROOT)/files
 	@echo "-------------------------------------------------------------------"
 	$(TAR) \
 		--exclude=.git --exclude='.gitignore' --exclude='.gitmodules' \
+		--exclude=packaging \
 		--exclude=debian --exclude=rpm \
 		$(TARBALL_EXTRA_ARGS) \
 		--transform="s,,$(NAME)/,S" \
