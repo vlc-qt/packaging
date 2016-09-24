@@ -156,7 +156,7 @@ ifneq ($(CI_TAG), )
 else
 	@echo '        "repo": "$(call builder,$@)-nightly",' >> $@.tmp
 endif
-	@echo '        "subject": "tano-si",' >> $@.tmp
+	@echo '        "subject": "tano-si"' >> $@.tmp
 	@echo '    },' >> $@.tmp
 	@echo '' >> $@.tmp
 	@echo '    "version": {' >> $@.tmp
