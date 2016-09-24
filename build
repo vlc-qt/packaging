@@ -169,8 +169,8 @@ endif
 	@echo '    },' >> $@.tmp
 	@echo '' >> $@.tmp
 	@echo '    "files": [{' >> $@.tmp
-	@echo '        "includePattern": "$(dir $@)release/(.*\.deb)",' >> $@.tmp
-	@echo '        "uploadPattern": "$$$$1",' >> $@.tmp
+	@echo '        "includePattern": "packaging/root/deb-$(call osdist,$@)/results/(.*\.deb)",' >> $@.tmp
+	@echo '        "uploadPattern": "$$1",' >> $@.tmp
 	@echo '        "matrixParams": {' >> $@.tmp
 	@echo '            "deb_distribution": "$(call ostarget,$(call osdist,$@))",' >> $@.tmp
 	@echo '            "deb_component": "main",' >> $@.tmp
