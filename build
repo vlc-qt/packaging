@@ -14,7 +14,7 @@ endif
 #
 
 DEBIAN:=
-UBUNTU:=ubuntu-xenial-amd64
+UBUNTU:=ubuntu-xenial-amd64 ubuntu-xenial-i386 ubuntu-yakkety-amd64 ubuntu-yakkety-i386
 
 DEBS:=$(DEBIAN) $(UBUNTU)
 
@@ -26,19 +26,26 @@ CI_BUILD:=
 PROJECT=$(notdir $(basename ${CURDIR}))
 PROJECT_PREFIX:=
 VERSION=$(shell cat VERSION)
-ifneq ($(CI_TAG), )
-RELEASE=1
-else ifneq ($(CI_BUILD), )
-RELEASE=0~build$(CI_BUILD)
-else
-RELEASE=0
-endif
 
 -include $(SCRIPTDIR)/projects/$(PROJECT).mk
 
 # Debian overrides
 DEB_VERSION=$(VERSION)
-DEB_RELEASE=$(RELEASE)
+ifneq ($(CI_TAG), )
+DEB_RELEASE=1
+else ifneq ($(CI_BUILD), )
+DEB_RELEASE=0~build$(CI_BUILD)
+else
+DEB_RELEASE=0
+endif
+
+# Apple overrides
+APPLE_VERSION=$(VERSION)
+ifneq ($(CI_BUILD), )
+APPLE_RELEASE=_build$(CI_BUILD)
+else
+APPLE_RELEASE=
+endif
 
 NAME=$(PROJECT_PREFIX)$(PROJECT)-$(VERSION)
 DATE=$(shell date +%Y-%m-%d)
@@ -67,7 +74,7 @@ $(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\1/p')
 endef
 
 $(info -------------------------------------------------------------------)
-$(info Building $(PROJECT) $(VERSION) (rev. $(RELEASE)))
+$(info Building $(PROJECT) $(VERSION))
 $(info -------------------------------------------------------------------)
 
 ##
@@ -134,16 +141,25 @@ $(BUILDROOT)/%/.build: $(BUILDROOT)/%/$(TARBALL) \
 	ls -1sh $(dir $@)/results/
 	test -f $(dir $@)/results/.done
 
-##
-## DEB
-##
+# Build packages directly in current shell
+$(BUILDROOT)/%/.build-shell: $(BUILDROOT)/%/$(TARBALL) \
+                       		 $(BUILDROOT)/%/Makefile
+	@echo "-------------------------------------------------------------------"
+	@echo "Building packages"
+	@echo "-------------------------------------------------------------------"
+	rm -rf $@
+	cd $(dir $@) && \
+	ls -l && \
+	make PROJECT=$(PROJECT_PREFIX)$(PROJECT) NAME=$(NAME) \
+		 TARBALL=$(TARBALL) TARGET=$(call ostarget,$(call osdist,$@)) \
+		 VERSION=$($(call builderu,$@)_VERSION) \
+		 RELEASE=$($(call builderu,$@)_RELEASE)
+	@echo "Successfully build $(PROJECT) for $@"
+	ls -1sh $(dir $@)/results/
+	test -f $(dir $@)/results/.done
 
-# Copy debian/ to buildroot/$OS-$DIST
-$(BUILDROOT)/deb-%/debian/changelog: debian/changelog
-	@mkdir -p $(abspath $(dir $@)/../)
-	cp -fpR debian $(abspath $(dir $@)/../)
-
-$(BUILDROOT)/deb-%/descriptor.json:
+# Generate Bintray descriptor.json
+$(BUILDROOT)/%/descriptor.json: $(BUILDROOT)/%/descriptorfiles.json
 	@mkdir -p $(dir $@)
 	@echo "-------------------------------------------------------------------"
 	@echo "Generating descriptor.json"
@@ -165,9 +181,20 @@ endif
 ifneq ($(CI_TAG), )
 	@echo '        "vcs_tag": "$(CI_TAG)",' >> $@.tmp
 endif
-	@echo '        "gpgSign": true' >> $@.tmp
+	@echo '        "gpgSign": false' >> $@.tmp
 	@echo '    },' >> $@.tmp
 	@echo '' >> $@.tmp
+
+	cat $(dir $@)/descriptorfiles.json >> $@.tmp
+
+	@echo '' >> $@.tmp
+	@echo '    "publish": true' >> $@.tmp
+	@echo '}' >> $@.tmp
+	@mv $@.tmp $@
+
+# Generate Bintray descriptor.json files for deb
+$(BUILDROOT)/deb-%/descriptorfiles.json:
+	@mkdir -p $(dir $@)
 	@echo '    "files": [{' >> $@.tmp
 	@echo '        "includePattern": "packaging/root/deb-$(call osdist,$@)/results/(.*\.deb)",' >> $@.tmp
 	@echo '        "uploadPattern": "$$1",' >> $@.tmp
@@ -177,15 +204,41 @@ endif
 	@echo '            "deb_architecture": "$(call osarch,$(call osdist,$@))"' >> $@.tmp
 	@echo '        }' >> $@.tmp
 	@echo '    }],' >> $@.tmp
-	@echo '' >> $@.tmp
-	@echo '    "publish": true' >> $@.tmp
-	@echo '}' >> $@.tmp
 	@mv $@.tmp $@
+
+# Generate Bintray descriptor.json files for apple
+$(BUILDROOT)/apple-%/descriptorfiles.json:
+	@mkdir -p $(dir $@)
+	@echo '    "files": [{' >> $@.tmp
+	@echo '        "includePattern": "packaging/root/apple-$(call osdist,$@)/results/(.*\.zip)",' >> $@.tmp
+	@echo '        "uploadPattern": "/$$1"' >> $@.tmp
+	@echo '    }],' >> $@.tmp
+	@mv $@.tmp $@
+
+
+##
+## DEB
+##
+
+# Copy debian/ to buildroot/$OS-$DIST
+$(BUILDROOT)/deb-%/debian/changelog: debian/changelog
+	@mkdir -p $(abspath $(dir $@)/../)
+	cp -fpR debian $(abspath $(dir $@)/../)
 
 # A rule to build DEB packages
 $(BUILDROOT)/deb-%/results/.done: $(BUILDROOT)/deb-%/debian/changelog \
                                   $(BUILDROOT)/deb-%/descriptor.json \
                                   $(BUILDROOT)/deb-%/.build
+	@true
+
+
+##
+## Apple
+##
+
+# A rule to build Apple packages
+$(BUILDROOT)/apple-%/results/.done: $(BUILDROOT)/apple-%/descriptor.json \
+                                    $(BUILDROOT)/apple-%/.build-shell
 	@true
 
 ##
@@ -198,6 +251,8 @@ tarball: $(BUILDROOT)/$(TARBALL)
 debian-%: $(BUILDROOT)/deb-debian-%/results/.done
 	@true
 ubuntu-%: $(BUILDROOT)/deb-ubuntu-%/results/.done
+	@true
+macos-%: $(BUILDROOT)/apple-macos-%/results/.done
 	@true
 
 clean:
