@@ -189,7 +189,7 @@ endif
 ifneq ($(CI_TAG), )
 	@echo '        "vcs_tag": "$(CI_TAG)",' >> $@.tmp
 endif
-	@echo '        "gpgSign": false' >> $@.tmp
+	@echo '        "gpgSign": true' >> $@.tmp
 	@echo '    },' >> $@.tmp
 	@echo '' >> $@.tmp
 
