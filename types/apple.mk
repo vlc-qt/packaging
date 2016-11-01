@@ -13,6 +13,13 @@ endif
 ifndef VERSION
 $(error Missing VERSION variable)
 endif
+ifndef NIGHTLY
+$(error Missing NIGHTLY variable)
+endif
+
+ifneq ($(NIGHTLY), 1)
+CMAKE_EXTRA=-DNO_GIT=ON
+endif
 
 all: results
 
@@ -30,7 +37,7 @@ $(NAME)/.build-debug: $(NAME)/CMakeLists.txt
 	@mkdir -p $(dir $@)/install-debug
 	cd $(dir $@)/build-debug && \
 	cmake .. -GNinja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../install-debug/ \
-		-DCOVERAGE=ON \
+		-DCOVERAGE=ON $(CMAKE_EXTRA) \
 		-DLIBVLC_INCLUDE_DIR=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/include \
 		-DLIBVLC_LIBRARY=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/lib/libvlc.dylib \
 		-DLIBVLCCORE_LIBRARY=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/lib/libvlccore.dylib
@@ -50,7 +57,7 @@ $(NAME)/.build-release: $(NAME)/CMakeLists.txt
 	@mkdir -p $(dir $@)/build-release
 	@mkdir -p $(dir $@)/install-release
 	cd $(dir $@)/build-release && \
-	cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install-release/ \
+	cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../install-release/ $(CMAKE_EXTRA) \
 		-DLIBVLC_INCLUDE_DIR=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/include \
 		-DLIBVLC_LIBRARY=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/lib/libvlc.dylib \
 		-DLIBVLCCORE_LIBRARY=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/lib/libvlccore.dylib
@@ -70,7 +77,7 @@ $(NAME)/.build-static: $(NAME)/CMakeLists.txt
 	@mkdir -p $(dir $@)/build-static
 	@mkdir -p $(dir $@)/install-static
 	cd $(dir $@)/build-static && \
-	cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DSTATIC=ON -DCMAKE_INSTALL_PREFIX=../install-static/ \
+	cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DSTATIC=ON -DCMAKE_INSTALL_PREFIX=../install-static/ $(CMAKE_EXTRA) \
 		-DLIBVLC_INCLUDE_DIR=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/include \
 		-DLIBVLC_LIBRARY=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/lib/libvlc.dylib \
 		-DLIBVLCCORE_LIBRARY=/Volumes/vlc-${VLC_VERSION}/VLC.app/Contents/MacOS/lib/libvlccore.dylib

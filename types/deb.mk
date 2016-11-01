@@ -16,11 +16,18 @@ endif
 ifndef RELEASE
 $(error Missing RELEASE variable)
 endif
+ifndef NIGHTLY
+$(error Missing NIGHTLY variable)
+endif
 ifndef DEBEMAIL
 DEBEMAIL="info@tano.si"
 endif
 ifndef DEBFULLNAME
 DEBFULLNAME="Tano.si Buildbot"
+endif
+
+ifeq ($(NIGHTLY), 1)
+DEBUILD_EXTRA=GIT_COMMIT=$(COMMIT)
 endif
 
 # https://wiki.debian.org/IntroDebianPackaging:
@@ -54,7 +61,9 @@ $(DEB_NAME)-$(RELEASE)~$(TARGET).dsc: $(NAME)/debian/changelog $(DEB_TARBALL)
 	@echo "-------------------------------------------------------------------"
 	@echo "Building packages"
 	@echo "-------------------------------------------------------------------"
-	cd $(NAME) && debuild --preserve-envvar=CCACHE_DIR \
+	cd $(NAME) && $(DEBUILD_EXTRA) debuild \
+		--preserve-envvar=CCACHE_DIR \
+		--preserve-envvar=GIT_COMMIT \
     	--prepend-path=/usr/lib/ccache \
 		-uc -us
 	@echo

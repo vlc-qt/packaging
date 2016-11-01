@@ -19,6 +19,7 @@ UBUNTU:=ubuntu-xenial-amd64 ubuntu-xenial-i386 ubuntu-yakkety-amd64 ubuntu-yakke
 DEBS:=$(DEBIAN) $(UBUNTU)
 
 # CI values
+CI_COMMIT:=
 CI_TAG:=
 CI_BUILD:=
 
@@ -26,6 +27,11 @@ CI_BUILD:=
 PROJECT=$(notdir $(basename ${CURDIR}))
 PROJECT_PREFIX:=
 VERSION=$(shell cat VERSION)
+ifneq ($(CI_TAG), )
+NIGHTLY=0
+else
+NIGHTLY=1
+endif
 
 -include $(SCRIPTDIR)/projects/$(PROJECT).mk
 
@@ -54,23 +60,23 @@ TARBALL_EXTRA_ARGS:=
 
 # get os-dist from target name
 define osdist
-$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\2/p')
+$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([_a-z0-9\-]*\).*/\2/p')
 endef
 
 define ostarget
-$(shell echo $1| sed -n 's/\([a-z0-9\-]*\)-\([a-z0-9\-]*\)-\([a-z0-9\-]*\)/\2/p')
+$(shell echo $1| sed -n 's/\([_a-z0-9\-]*\)-\([_a-z0-9\-]*\)-\([_a-z0-9\-]*\)/\2/p')
 endef
 
 define osarch
-$(shell echo $1| sed -n 's/\([a-z0-9\-]*\)-\([a-z0-9\-]*\)-\([a-z0-9\-]*\)/\3/p')
+$(shell echo $1| sed -n 's/\([_a-z0-9\-]*\)-\([_a-z0-9\-]*\)-\([_a-z0-9\-]*\)/\3/p')
 endef
 
 define builderu
-$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\1/p' | tr a-z A-Z)
+$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([_a-z0-9\-]*\).*/\1/p' | tr a-z A-Z)
 endef
 
 define builder
-$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([a-z0-9\-]*\).*/\1/p')
+$(shell echo $1| sed -n 's/.*\/\([a-z]*\)-\([_a-z0-9\-]*\).*/\1/p')
 endef
 
 $(info -------------------------------------------------------------------)
@@ -136,7 +142,8 @@ $(BUILDROOT)/%/.build: $(BUILDROOT)/%/$(TARBALL) \
 		make PROJECT=$(PROJECT_PREFIX)$(PROJECT) NAME=$(NAME) \
 	         TARBALL=$(TARBALL) TARGET=$(call ostarget,$(call osdist,$@)) \
 	         VERSION=$($(call builderu,$@)_VERSION) \
-	         RELEASE=$($(call builderu,$@)_RELEASE)
+	         RELEASE=$($(call builderu,$@)_RELEASE) \
+			 NIGHTLY=$(NIGHTLY) COMMIT=$(CI_COMMIT)
 	@echo "Successfully build $(PROJECT) for $@"
 	ls -1sh $(dir $@)/results/
 	test -f $(dir $@)/results/.done
@@ -153,7 +160,8 @@ $(BUILDROOT)/%/.build-shell: $(BUILDROOT)/%/$(TARBALL) \
 	make PROJECT=$(PROJECT_PREFIX)$(PROJECT) NAME=$(NAME) \
 		 TARBALL=$(TARBALL) TARGET=$(call ostarget,$(call osdist,$@)) \
 		 VERSION=$($(call builderu,$@)_VERSION) \
-		 RELEASE=$($(call builderu,$@)_RELEASE)
+		 RELEASE=$($(call builderu,$@)_RELEASE) \
+		 NIGHTLY=$(NIGHTLY) COMMIT=$(CI_COMMIT)
 	@echo "Successfully build $(PROJECT) for $@"
 	ls -1sh $(dir $@)/results/
 	test -f $(dir $@)/results/.done
