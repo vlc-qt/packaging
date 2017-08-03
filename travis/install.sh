@@ -6,14 +6,14 @@ set -ev
 ########
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     # Setup versions
-    export QT_VERSION_SHORT=5.7
-    export QT_VERSION=5.7.0
+    export QT_VERSION_SHORT=5.9
+    export QT_VERSION=5.9.1
     export QT_PATH=/Users/$USER/Qt$QT_VERSION
-    export VLC_VERSION=2.2.4
+    export VLC_VERSION=2.2.6
 
     # Install from homebrew
     brew update
-    brew outdated cmake || brew upgrade cmake
+    # brew outdated cmake || brew upgrade cmake
     brew install p7zip ninja gnu-tar
     brew install lcov --HEAD
 
