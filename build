@@ -14,7 +14,7 @@ endif
 #
 
 DEBIAN:=
-UBUNTU:=ubuntu-xenial-amd64 ubuntu-xenial-i386 ubuntu-yakkety-amd64 ubuntu-yakkety-i386
+UBUNTU:=ubuntu-xenial-amd64 ubuntu-xenial-i386
 
 DEBS:=$(DEBIAN) $(UBUNTU)
 
