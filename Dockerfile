@@ -19,10 +19,3 @@ RUN apt-get update && apt-get install -y \
 # VLC
 RUN apt-get update && apt-get install -y \
     libvlc-dev libvlccore-dev vlc-nox
-
-# Builder user
-RUN mkdir -p /home/builder
-RUN useradd -s /bin/bash -u 1000 -d /home/builder builder
-RUN usermod -a -G adm builder || :;\
-    usermod -a -G sudo builder || :
-USER builder
