@@ -18,10 +18,21 @@ Controller.prototype.IntroductionPageCallback = function() {
 }
 
 Controller.prototype.TargetDirectoryPageCallback = function() {
+    var widget = gui.currentPageWidget();
+    if (widget) {
+        widget.TargetDirectoryLineEdit.setText("/Users/travis/Qt5.9.1");
+    }
+
     gui.clickButton(buttons.NextButton);
 }
 
 Controller.prototype.ComponentSelectionPageCallback = function() {
+    var widget = gui.currentPageWidget();
+    if (widget) {
+        widget.deselectAll();
+        widget.selectComponent("qt.591.clang_64");
+    }
+
     gui.clickButton(buttons.NextButton);
 }
 

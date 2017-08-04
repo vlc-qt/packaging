@@ -6,7 +6,7 @@ set -ev
 ########
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     # Setup versions
-    export QT_VERSION_SHORT=5.9
+    export QT_VERSION_SHORT=5.9.1
     export QT_VERSION=5.9.1
     export QT_PATH=/Users/$USER/Qt$QT_VERSION
     export VLC_VERSION=2.2.6
@@ -35,9 +35,13 @@ if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     if [[ ! -d "$QT_PATH/${QT_VERSION_SHORT}/" ]]; then
         mkdir -p qt
         pushd qt
-        curl -LO http://download.qt.io/official_releases/qt/${QT_VERSION_SHORT}/${QT_VERSION}/qt-opensource-mac-x64-clang-${QT_VERSION}.dmg
-        hdiutil attach qt-opensource-mac-x64-clang-${QT_VERSION}.dmg
-        /Volumes/qt-opensource-mac-x64-clang-${QT_VERSION}/qt-opensource-mac-x64-clang-${QT_VERSION}.app/Contents/MacOS/qt-opensource-mac-x64-clang-${QT_VERSION} --script ../../packaging/travis/qt-installer-noninteractive.qs
+        curl -LO http://download.qt.io/official_releases/online_installers/qt-unified-mac-x64-online.dmg
+        hdiutil attach qt-unified-mac-x64-online.dmg
+
+        QT_APP=$(cd /Volumes && ls | grep qt-unified-mac)
+        QT_APP=${QT_APP//\//}
+
+        /Volumes/${QT_APP}/${QT_APP}.app/Contents/MacOS/${QT_APP} -v --script ../../packaging/travis/qt-installer-noninteractive.qs
         popd
     fi
     export PATH=$PATH:$QT_PATH/$QT_VERSION_SHORT/clang_64/bin
