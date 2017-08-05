@@ -88,7 +88,6 @@ $(NAME)/.build-static: $(NAME)/CMakeLists.txt
 	cd $(dir $@)/build-static && cmake ..
 	cd $(dir $@)/build-static && ninja -v
 	cd $(dir $@)/build-static && ninja install -v
-	cd $(dir $@)/build-static && CTEST_OUTPUT_ON_FAILURE=1 ninja test -v
 	touch $@
 
 results: $(NAME)/.build-debug \
