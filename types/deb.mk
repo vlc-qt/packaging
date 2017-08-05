@@ -70,7 +70,7 @@ $(DEB_NAME)-$(RELEASE)~$(TARGET).dsc: $(NAME)/debian/changelog $(DEB_TARBALL)
 	@echo "-------------------------------------------------------------------"
 	@echo "Running tests"
 	@echo "-------------------------------------------------------------------"
-	cd $(NAME)/obj-* && xvfb-run -s "-screen 0 1024x768x24 +extension GLX +render" make test
+	cd $(NAME)/obj-* && CTEST_OUTPUT_ON_FAILURE=1 xvfb-run -s "-screen 0 1024x768x24 +extension GLX +render" make test
 
 results: $(DEB_NAME)-$(RELEASE)~$(TARGET).dsc
 	@echo "-------------------------------------------------------------------"
